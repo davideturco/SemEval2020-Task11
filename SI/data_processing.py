@@ -67,3 +67,5 @@ def group_spans(article_id, span_intervals):
     return spans
 
 
+def bio_tagger():
+    pass
