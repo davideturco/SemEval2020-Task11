@@ -1,4 +1,7 @@
+import nltk
 from nltk.tokenize.regexp import RegexpTokenizer
+from nltk.tokenize import word_tokenize
+
 import spacy
 
 
@@ -13,10 +16,23 @@ class NltkTokenizer:
                             |(?:[+/\-@&*])         # special characters with meanings
                             """
 
-    def tokenize(self, text):
-        tokenizer = RegexpTokenizer(self.pattern)
+    def __simply_tokenize__(self, text):
+        # tokenizer = RegexpTokenizer(self.pattern)
+        # return tokenizer.tokenize(text)
+        return word_tokenize(text)
 
-        return tokenizer.tokenize(text)
+    def tokenize(self, text):
+        """
+        Returns a list of tuples containing every token and its associated position in the text
+        """
+        tokens = self.__simply_tokenize__(text)
+        offset = 0
+        tok_pos = []
+        for token in tokens:
+            offset = text.find(token, offset)
+            tok_pos.append((token, offset))
+            offset += len(token)
+        return tok_pos
 
 
 class SpacyTokenizer:
@@ -29,5 +45,4 @@ class SpacyTokenizer:
 
 # TODO: Add possibility to return the index of a token (so that it can match the index of the span). For Spacy this
 #  can be done using the attribute .idx (https://realpython.com/natural-language-processing-spacy-python
-#  /#tokenization-in-spacy) but for NLTK see https://stackoverflow.com/questions/31668493/get-indices-of-original
-#  -text-from-nltk-word-tokenize
+#  /#tokenization-in-spacy).
