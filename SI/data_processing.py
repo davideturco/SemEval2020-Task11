@@ -67,5 +67,25 @@ def group_spans(article_id, span_intervals):
     return spans
 
 
-def bio_tagger():
-    pass
+def bio_encoder(output_file, tokens, data):
+    """Given an article which has been tokenised and its associated propaganda spans returns a BIO-encoded file"""
+    previous_label = 'O'
+    with open(output_file, 'w') as output:
+        for key, value in data.items():
+            article_id, spans = int(key), sorted(value)
+        for token in tokens:
+            for span in spans[0]:
+                if span[0] <= token[1] < span[1]:
+                    label = 'I'
+                    break
+                else:
+                    label = 'O'
+            if label != 'O':
+                if previous_label != 'O':
+                    label = 'I'
+                else:
+                    label = 'B'
+            output.write(token[0] + '\t' + label + '\n')
+            previous_label = label
+    # TODO: need to work on this function, as the BIO encoded text is not correct (at least the number of B
+    #  is equal to the number of spans
