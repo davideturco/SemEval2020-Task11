@@ -41,8 +41,5 @@ class SpacyTokenizer:
         self.tokenizer = spacy.load("en_core_web_sm")
 
     def tokenize(self, text):
-        return self.tokenizer(text)
+        return [(str(words),words.idx) for words in self.tokenizer(text)]
 
-# TODO: Add possibility to return the index of a token (so that it can match the index of the span). For Spacy this
-#  can be done using the attribute .idx (https://realpython.com/natural-language-processing-spacy-python
-#  /#tokenization-in-spacy).
