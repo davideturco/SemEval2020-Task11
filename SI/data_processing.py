@@ -1,7 +1,7 @@
 import glob
 import os
 from tokenizers import NltkTokenizer, SpacyTokenizer
-
+from tqdm import tqdm
 
 # noinspection DuplicatedCode
 def load_articles(article_folder):  # , techniques_folder):
@@ -92,14 +92,25 @@ def bio_encoder(output_file, tokens, data):
             previous_label = label
 
 
-def create_bio_encoded_data(path):
-    article_contents, article_ids = load_articles(path)
-    for article, art_id in zip(article_contents, article_ids):
-        ids, raw_spans = load_spans('../datasets/train-labels-task-si/article' + art_id + '.task-si.labels')
+def create_bio_encoded_data(article_folder, spans_folder, encoded_folder):
+    article_contents, article_ids = load_articles(article_folder)
+    for article, art_id in tqdm(zip(article_contents, article_ids)):
+        ids, raw_spans = load_spans(spans_folder + '/article' + art_id + '.task-si.labels')
         spans = group_spans(ids, raw_spans)
         tokenizer = SpacyTokenizer()
         tokens = tokenizer.tokenize(article)
-        bio_encoder('../datasets/train_encoded/' + art_id + '.txt', tokens, spans)
+        bio_encoder(encoded_folder + '/' + art_id + '.txt', tokens, spans)
+
+
+def remove_white_lines(directory):
+    """Function to remove the empty lines from each file in a directory.
+    Taken from https://stackoverflow.com/questions/37682955/how-to-delete-empty-lines-from-a-txt-file"""
+    for file in glob.glob(os.path.join(directory, '*.txt')):
+        with open(file, 'r') as infile, open(file,'w') as outfile:
+            for line in infile:
+                if not line.strip():
+                    continue
+                outfile.write(line)
 
 
 if __name__ == '__main__':
