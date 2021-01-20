@@ -1,7 +1,8 @@
 import glob
 import os
-from tokenizers import NltkTokenizer, SpacyTokenizer
+from tokenizer import NltkTokenizer, SpacyTokenizer
 from tqdm import tqdm
+
 
 # noinspection DuplicatedCode
 def load_articles(article_folder):  # , techniques_folder):
@@ -68,28 +69,33 @@ def group_spans(article_id, span_intervals):
     return spans
 
 
-def bio_encoder(output_file, tokens, data):
+def bio_encoder(output_file, tokens, data, has_spans=True):
     """Given an article which has been tokenised and its associated propaganda spans returns a BIO-encoded file"""
-    previous_label = 'O'
-    global temp_spans
-    with open(output_file, 'w') as output:
-        for key, value in data.items():
-            article_id, temp_spans = int(key), sorted(value)
+    if has_spans:
+        previous_label = 'O'
+        global temp_spans
+        with open(output_file, 'w') as output:
+            for key, value in data.items():
+                article_id, temp_spans = int(key), sorted(value)
 
-        for token in tokens:
-            for interval in temp_spans[0]:
-                if interval[0] <= token[1] < interval[1]:
-                    label = 'I'
-                    break
-                else:
-                    label = 'O'
-            if label != 'O':
-                if previous_label != 'O':
-                    label = 'I'
-                else:
-                    label = 'B'
-            output.write(token[0] + '\t' + label + '\n')
-            previous_label = label
+            for token in tokens:
+                for interval in temp_spans[0]:
+                    if interval[0] <= token[1] < interval[1]:
+                        label = 'I'
+                        break
+                    else:
+                        label = 'O'
+                if label != 'O':
+                    if previous_label != 'O':
+                        label = 'I'
+                    else:
+                        label = 'B'
+                output.write(token[0] + '\t' + label + '\n')
+                previous_label = label
+    else:
+        with open(output_file, 'w') as output:
+            for token in tokens:
+                output.write(token[0] + '\t' + 'O' + '\n')
 
 
 def create_bio_encoded_data(article_folder, spans_folder, encoded_folder):
@@ -99,19 +105,26 @@ def create_bio_encoded_data(article_folder, spans_folder, encoded_folder):
         spans = group_spans(ids, raw_spans)
         tokenizer = SpacyTokenizer()
         tokens = tokenizer.tokenize(article)
-        bio_encoder(encoded_folder + '/' + art_id + '.txt', tokens, spans)
+        if not raw_spans:
+            bio_encoder(encoded_folder + '/' + art_id + '.txt', tokens, spans, has_spans=False)
+        else:
+            bio_encoder(encoded_folder + '/' + art_id + '.txt', tokens, spans)
 
 
 def remove_white_lines(directory):
     """Function to remove the empty lines from each file in a directory.
     Taken from https://stackoverflow.com/questions/37682955/how-to-delete-empty-lines-from-a-txt-file"""
     for file in glob.glob(os.path.join(directory, '*.txt')):
-        with open(file, 'r') as infile, open(file,'w') as outfile:
+        with open(file, 'r+') as infile, open(file.split('_encoded/')[0] + '_'
+                                                                           'encoded/' +
+                                              os.path.basename(file).split('.')[0] + '-processed.txt', 'w') as outfile:
             for line in infile:
-                if not line.strip():
-                    continue
+                if not line.strip(): continue
+                a = [x.strip() for x in line.split('\t')]
+                if a[0] == "": continue
                 outfile.write(line)
 
 
 if __name__ == '__main__':
-    create_bio_encoded_data('../datasets/train-articles/')
+    create_bio_encoded_data('../datasets/train-articles/', '../datasets/train-labels-task-si', '../datasets'
+                                                                                               '/train_encoded')
