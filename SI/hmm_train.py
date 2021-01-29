@@ -1,6 +1,3 @@
-import glob
-import os
-
 import dill
 from nltk.tag import hmm
 from nltk.metrics import *
@@ -11,12 +8,14 @@ from statistics import mean
 TRAIN_FOLDER = '../datasets/train-articles'
 TRAIN_LABELS_FOLDER = '../datasets/train-labels-task-si'
 TRAIN_ENCODED = '../datasets/train_encoded'
-TEST_FOLDER = '../datasets/dev-articles'
-TEST_LABELS_FOLDER = '../datasets/dev-labels-task-si'
-TEST_ENCODED = '../datasets/dev_encoded'
+DEV_FOLDER = '../datasets/dev-articles'
+DEV_LABELS_FOLDER = '../datasets/dev-labels-task-si'
+DEV_ENCODED = '../datasets/dev_encoded'
+DATA_FOLDER = '../datasets/data_phase1'
 
 
 def return_in_nltk_format(path):
+    """Return the tagged tokens as list of tuples in the form (token, tag)"""
     sequences = []
     for file in glob.glob(path + '/*.txt'):
         lines = []
@@ -27,6 +26,18 @@ def return_in_nltk_format(path):
         lines = list(filter(lambda x: len(x) == 2, lines))
         sequences.append(lines)
     return sequences
+
+
+def return_in_nltk_format_unique(file):
+    """Return the tagged tokens from unique files (such as train.txt) as list of tuples in the form (token, tag)"""
+    sequences = []
+    with open(file, 'r') as training_file:
+        articles = training_file.read().split('\n\n')
+        for article in articles:
+            lines = [tuple(x.split('\t')) for x in article.splitlines()]
+            lines = list(filter(lambda x: len(x) == 2, lines))
+            sequences.append(lines)
+    return sequences[:-2]
 
 
 def create_encoded_dataset(articles_folder, label_folder, encoded_folder):
@@ -67,27 +78,34 @@ def f1(confusion):
 
 def main():
     create_encoded_dataset(TRAIN_FOLDER, TRAIN_LABELS_FOLDER, TRAIN_ENCODED)
-    create_encoded_dataset(TEST_FOLDER, TEST_LABELS_FOLDER, TEST_ENCODED)
+    create_encoded_dataset(DEV_FOLDER, DEV_LABELS_FOLDER, DEV_ENCODED)
 
-    train_sequences = return_in_nltk_format(TRAIN_ENCODED)
-    test_sequences = return_in_nltk_format(TEST_ENCODED)
+    remove_white_lines_hmm(TRAIN_ENCODED)
+    remove_white_lines_hmm(DEV_ENCODED)
+
+    generate_single_files(DEV_ENCODED, DATA_FOLDER)
+    generate_single_files(TRAIN_ENCODED, DATA_FOLDER)
+
+    # train_sequences = return_in_nltk_format(TRAIN_ENCODED)
+    # test_sequences = return_in_nltk_format(DEV_ENCODED)
+    train_sequences = return_in_nltk_format_unique('../datasets/data_phase1/train.txt')
+    test_sequences = return_in_nltk_format_unique('../datasets/data_phase1/dev.txt')
     hmm_tagger = hmm.HiddenMarkovModelTagger.train(train_sequences, test_sequence=test_sequences)
 
     with open('hmm_tagger.dill', 'wb') as saved_model:
         dill.dump(hmm_tagger, saved_model)
 
-    # TEST
     f1_score = []
     for sequence in test_sequences:
         sequence_words = [x[0] for x in sequence]
-        # TODO: maybe save tags on a txt file. Easier to visualise and compare results
         tags = hmm_tagger.tag(sequence_words)
         ref = [x[1] for x in sequence]
         test = [x[1] for x in tags]
+        # f1_score.append(f_measure(set(ref),set(test)))
+        # print(f_measure(set(ref),set(test)))
         a = ConfusionMatrix(ref, test)._confusion
         f1_score.append(f1(a))
         print(f1(a))
-    # TODO: investigate if result is actually correct. F1 score seems too high
     print(f"The f1-score is {mean(f1_score)}.")
 
 
