@@ -43,3 +43,4 @@ class SpacyTokenizer:
     def tokenize(self, text):
         return [(str(words),words.idx) for words in self.tokenizer(text)]
 
+
